@@ -7,6 +7,7 @@
 #include <image_transport/image_transport.h>
 
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d.hpp>
 
 #include "node.h"
 #include "names.h"
