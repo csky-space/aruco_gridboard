@@ -1,0 +1,22 @@
+image_width: 640
+image_height: 480
+camera_name: cameravHQ_640x480
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [963.2505587179046, 0, 300.3514626495674, 0, 967.5130396001279, 257.6626>
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.5062409393066525, 0.3032947074399363, -0.007100204175774314, 4.67124>
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [905.0670776367188, 0, 297.3931100200134, 0, 0, 934.8025512695312, 256.8>
+
+
