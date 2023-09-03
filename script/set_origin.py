@@ -1,20 +1,28 @@
 #!/usr/bin/env python
-
+import mavros_msgs.msg
 ##
 #
 # Send SET_GPS_GLOBAL_ORIGIN and SET_HOME_POSITION messages
 #
 ##
-
 import rospy
 from pymavlink.dialects.v10 import ardupilotmega as MAV_APM
 from mavros.mavlink import convert_to_rosmsg
-from mavros_msgs.msg import Mavlink
+from mavros_msgs.msg import Mavlink, LandingTarget, StatusText
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Vector3Stamped
+from tf import transformations
+
 
 # Global position of the origin
-lat = 42.56335 * 1e7   # Terni
-lon = 12.64329 * 1e7   # Terni
+lat = 53.56335 * 1e7   # Terni
+lon = 39.64329 * 1e7   # Terni
 alt = 163 * 1e3
+
+mav_pub: rospy.topics.Publisher
+landing_pub: rospy.topics.Publisher
+status_text_pub: rospy.topics.Publisher
+my_publisher: rospy.topics.Publisher
 
 class fifo(object):
     """ A simple buffer """
@@ -43,9 +51,9 @@ def set_global_origin(mav, pub):
     """
     target_system = mav.srcSystem
     #target_system = 0   # 0 --> broadcast to everyone
-    lattitude = lat
-    longitude = lon
-    altitude = alt
+    lattitude = int(lat)
+    longitude = int(lon)
+    altitude = int(alt)
 
     msg = MAV_APM.MAVLink_set_gps_global_origin_message(
             target_system,
@@ -63,9 +71,9 @@ def set_home_position(mav, pub):
     target_system = mav.srcSystem
     #target_system = 0  # broadcast to everyone
 
-    lattitude = lat
-    longitude = lon
-    altitude = alt
+    lattitude = int(lat)
+    longitude = int(lon)
+    altitude = int(alt)
     
     x = 0
     y = 0
@@ -91,23 +99,142 @@ def set_home_position(mav, pub):
 
     send_message(msg, mav, pub)
 
+def mav_callback(msg):
+    a = 1
+    #print("read mavlink!!")
+    #print(msg)
+
+    #lat = lat + 1000
+    #set_global_origin(mav, mavlink_pub)
+
+def vision_pose_callback(pose: PoseStamped):
+    print("read pose:")
+    '''
+    print(mav_pub)
+    f = fifo()
+    mav = MAV_APM.MAVLink(f, srcSystem=1, srcComponent=1)
+    quaternion = (
+        pose.pose.orientation.x,
+        pose.pose.orientation.y,
+        pose.pose.orientation.z,
+        pose.pose.orientation.w)
+    euler_angle = transformations.euler_from_quaternion(quaternion)
+
+    msg = MAV_APM.MAVLink_vision_position_estimate_message(
+        pose.header.stamp.nsecs * 1000,
+        pose.pose.position.x,
+        pose.pose.position.y,
+        pose.pose.position.z * -1,
+        euler_angle[0],
+        euler_angle[1],
+        euler_angle[2])
+
+    msg = MAV_APM.MAVLink_landing_target_message(
+        pose.header.stamp.nsecs * 1000,
+        0,
+        MAV_APM.MAV_FRAME_BODY_FRD,
+        0,
+        0,
+        0,
+        0,
+        0,
+        pose.pose.position.x,
+        pose.pose.position.y,
+        pose.pose.position.z,
+        )
+    msg.position_valid = 1
+
+
+    msg.pack(mav)
+    rosmsg = convert_to_rosmsg(msg)
+
+    print(msg)
+    #mav_pub.publish(rosmsg)
+
+    '''
+
+    #landing_pub.publish(pose)
+
+    a = mavros_msgs.msg.LandingTarget()
+    a.pose = pose.pose
+    a.type = 2 # VISION_FIDUCIAL
+    a.frame = 12 #BODY FRD
+    a.target_num = 0
+
+
+
+    landing_pub.publish(a)
+
+    '''
+    text = StatusText()
+    text.text = "Startuem22"
+    text.severity = 4
+    text.header.stamp = rospy.get_time()
+    status_text_pub.publish(text)
+    '''
+
+
 if __name__=="__main__":
     try:
-        rospy.init_node("origin_publisher")
+        node = rospy.init_node("origin_publisher")
+        #topic = rospy.topics.Topic("textTopic", PoseStamped, "poseStamped")
+        my_publisher = rospy.Publisher("/origin_publisher/my_topic_test", PoseStamped, queue_size=20)
         mavlink_pub = rospy.Publisher("/mavlink/to", Mavlink, queue_size=20)
+        rospy.Subscriber("mavlink/from", Mavlink, mav_callback)
+        rospy.Subscriber("mavros/vision_pose/pose", PoseStamped, vision_pose_callback)
+        landing_pub = rospy.Publisher("mavros/landing_target/raw", LandingTarget)
+        status_text_pub = rospy.Publisher("mavros/statustext/send", StatusText, queue_size=20)
+        #landing_pub = rospy.Publisher("mavros/landing_target/pose", PoseStamped)
+        #landing_pub = rospy.Publisher("mavros/landing_target/lt_marker", Vector3Stamped)
 
+        mav_pub = mavlink_pub
         # Set up mavlink instance
         f = fifo()
-        mav = MAV_APM.MAVLink(f, srcSystem=1, srcComponent=1)
+        mav = MAV_APM.MAVLink(f, srcSystem=2, srcComponent=1)
 
         # wait to initialize
         while mavlink_pub.get_num_connections() <= 0:
             pass
-   
+
+        while status_text_pub.get_num_connections() <= 0:
+            pass
+
+        print("start")
+        text = StatusText()
+        text.text = "Startuem"
+        text.severity = 4
+        text.header.stamp = rospy.Time.now()
+        text.header.frame_id
+        status_text_pub.publish(text)
+
+        while not rospy.is_shutdown():
+            pose = PoseStamped()
+            pose.pose.position.z = 10
+            my_publisher.publish(pose)
+            rospy.sleep(2)
+
+        '''
         for _ in range(2):
-            rospy.sleep(1)
-            set_global_origin(mav, mavlink_pub)
-            set_home_position(mav, mavlink_pub)
+            rospy.sleep(5)
+            text = StatusText()
+            text.text = "Startuem22"
+            text.severity = 4
+            text.header.stamp = rospy.Time.now()
+            status_text_pub.publish(text)
+            text_msg = str.encode("startuem")
+            msg = MAV_APM.MAVLink_statustext_message(4, text_msg)
+
+            msg.pack(mav)
+            rosmsg = convert_to_rosmsg(msg)
+            mav_pub.publish(rosmsg)
+
+            #set_global_origin(mav, mavlink_pub)
+            #set_home_position(mav, mavlink_pub)
+
+
+
+        name = input("write to exit: ")
+        '''
     except rospy.ROSInterruptException:
         pass
 

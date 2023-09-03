@@ -122,7 +122,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.0500000007
       Shape: Axes
-      Topic: /mavros/vision_pose/pose
+      Topic: /origin_publisher/vision_pose/pose
       Unreliable: false
       Value: true
   Enabled: true
