@@ -194,7 +194,7 @@ def vp_callback(pose: PoseStamped):
         print("vp error")
         return
 
-    print(vp_status)
+    #print(vp_status)
     a = mavros_msgs.msg.LandingTarget()
     a.pose = pose.pose
     a.pose.position.x = a.pose.position.x
@@ -210,9 +210,9 @@ def vp_callback(pose: PoseStamped):
     a.pose.position.z = a.pose.position.z * -1
 
     landing_pub.publish(a)
-    print(a)
-    print(a.header.stamp)
-    print(rospy.Time.now())
+    #print(a)
+    #print(a.header.stamp)
+    #print(rospy.Time.now())
 
 def vp_camera_callback(pose: PoseStamped):
     print(landing_pub.name)
@@ -223,7 +223,7 @@ def vp_camera_callback(pose: PoseStamped):
         print("vp error")
         return
 
-    print(vp_status)
+    #print(vp_status)
     a = mavros_msgs.msg.LandingTarget()
     a.pose = pose.pose
     a.type = 2 # VISION_FIDUCIAL
@@ -240,7 +240,7 @@ def vp_camera_callback(pose: PoseStamped):
     a.pose.position.z = a.pose.position.z * -1
 
     landing_pub.publish(a)
-    print(a)
+    #print(a)
 
     
     sens = Range()

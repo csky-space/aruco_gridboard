@@ -14,6 +14,27 @@
   <arg name="camera_frame_id" default="camera"/>
   <arg name="camera_name" default="camerav1_640x480"/>
 
+  <arg name="fcu_url" default="/dev/ttyAMA0:921600" />
+  <arg name="gcs_url" default="udp://@10.42.0.70" />
+  <arg name="tgt_system" default="1" />
+  <arg name="tgt_component" default="1" />
+  <arg name="log_output" default="screen" />
+  <arg name="fcu_protocol" default="v2.0" />
+  <arg name="respawn_mavros" default="false" />
+
+  <include file="$(find mavros)/launch/node.launch">
+    <arg name="pluginlists_yaml" value="$(find mavros)/launch/apm_pluginlists.yaml" />
+    <arg name="config_yaml" value="$(find mavros)/launch/apm_config.yaml" />
+
+    <arg name="fcu_url" value="$(arg fcu_url)" />
+    <arg name="gcs_url" value="$(arg gcs_url)" />
+    <arg name="tgt_system" value="$(arg tgt_system)" />
+    <arg name="tgt_component" value="$(arg tgt_component)" />
+    <arg name="log_output" value="$(arg log_output)" />
+    <arg name="fcu_protocol" value="$(arg fcu_protocol)" />
+    <arg name="respawn_mavros" value="$(arg respawn_mavros)" />
+  </include>
+
   <node type="raspicam_node" pkg="raspicam_node" name="camera" output="screen">
     <param name="private_topics" value="true"/>
 
@@ -42,6 +63,10 @@
 
     <remap from="/aruco_gridboard/camera_info" to="/camera/camera_info"/>
     <remap from="/aruco_gridboard/image_raw" to="/camera/image"/>
+  </node>
+
+  <node pkg="aruco_gridboard" type="set_origin.py" name="origin_publisher" output="screen" >
+
   </node>
 
 </launch>
