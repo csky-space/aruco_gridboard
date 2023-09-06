@@ -431,7 +431,7 @@ namespace aruco_gridboard
 
                 if (debug_display_)
                 {
-                    cv::imshow(OPENCV_WINDOW, imageCopy);
+                    //cv::imshow(OPENCV_WINDOW, imageCopy);
                     cv::waitKey(2);
                 }
 
@@ -447,7 +447,7 @@ namespace aruco_gridboard
 
         if (debug_display_)
         {
-            cv::destroyWindow(OPENCV_WINDOW);
+            //cv::destroyWindow(OPENCV_WINDOW);
         }
     } // end spin
 }
