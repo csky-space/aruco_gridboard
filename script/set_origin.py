@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import math
+
 import mavros_msgs.msg
 ##
 #
@@ -9,9 +11,12 @@ import rospy
 from pymavlink.dialects.v10 import ardupilotmega as MAV_APM
 from mavros.mavlink import convert_to_rosmsg
 from mavros_msgs.msg import Mavlink, LandingTarget, StatusText
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Vector3
 from geometry_msgs.msg import Vector3Stamped
+from sensor_msgs.msg import Range
 from tf import transformations
+from std_msgs.msg import Int8
+import numpy
 
 
 # Global position of the origin
@@ -20,9 +25,12 @@ lon = 39.64329 * 1e7   # Terni
 alt = 163 * 1e3
 
 mav_pub: rospy.topics.Publisher
-landing_pub: rospy.topics.Publisher
+global landing_pub
 status_text_pub: rospy.topics.Publisher
 my_publisher: rospy.topics.Publisher
+rangefinder: rospy.topics.Publisher
+
+vp_status: Int8 = None
 
 class fifo(object):
     """ A simple buffer """
@@ -108,7 +116,7 @@ def mav_callback(msg):
     #set_global_origin(mav, mavlink_pub)
 
 def vision_pose_callback(pose: PoseStamped):
-    print("read pose:")
+    #print("read pose:")
     '''
     print(mav_pub)
     f = fifo()
@@ -161,6 +169,10 @@ def vision_pose_callback(pose: PoseStamped):
     a.frame = 12 #BODY FRD
     a.target_num = 0
 
+    a.pose.position.x = a.pose.position.x * -1
+    a.pose.position.y = a.pose.position.y * -1
+    a.pose.position.z = a.pose.position.z * -1
+
 
 
     landing_pub.publish(a)
@@ -173,19 +185,107 @@ def vision_pose_callback(pose: PoseStamped):
     status_text_pub.publish(text)
     '''
 
+def vp_callback(pose: PoseStamped):
+    print(landing_pub.name)
+    if vp_status is None:
+        return
+
+    if vp_status.data == 0:
+        print("vp error")
+        return
+
+    print(vp_status)
+    a = mavros_msgs.msg.LandingTarget()
+    a.pose = pose.pose
+    a.pose.position.x = a.pose.position.x
+    a.pose.position.y = a.pose.position.y
+    a.type = 2 # VISION_FIDUCIAL
+    a.frame = 12 #BODY FRD
+    a.target_num = 0
+    a.distance = math.sqrt(a.pose.position.x**2 + a.pose.position.y**2 + a.pose.position.z**2)
+    a.header = pose.header
+
+    a.pose.position.x = a.pose.position.x * -1
+    a.pose.position.y = a.pose.position.y * -1
+    a.pose.position.z = a.pose.position.z * -1
+
+    landing_pub.publish(a)
+    print(a)
+    print(a.header.stamp)
+    print(rospy.Time.now())
+
+def vp_camera_callback(pose: PoseStamped):
+    print(landing_pub.name)
+    if vp_status is None:
+        return
+
+    if vp_status.data == 0:
+        print("vp error")
+        return
+
+    print(vp_status)
+    a = mavros_msgs.msg.LandingTarget()
+    a.pose = pose.pose
+    a.type = 2 # VISION_FIDUCIAL
+    a.frame = 12 #BODY FRD
+    a.target_num = 0
+    a.distance = math.sqrt(a.pose.position.x**2 + a.pose.position.y**2 + a.pose.position.z**2)
+    a.header = pose.header
+
+    xx = a.pose.position.x
+    yy = a.pose.position.y
+
+    a.pose.position.x = xx
+    a.pose.position.y = yy * -1
+    a.pose.position.z = a.pose.position.z * -1
+
+    landing_pub.publish(a)
+    print(a)
+
+    
+    sens = Range()
+    sens.header = a.header
+    sens.range = a.pose.position.z * -1
+    sens.min_range = 0
+    sens.max_range = 10
+    sens.field_of_view = 1
+    rangefinder.publish(sens)
+
+
+    '''
+    msg = MAV_APM.MAVLink_distance_sensor_message(
+        int(a.header.stamp.nsecs / 1000),
+        0,
+        1000,
+        int(a.pose.position.z * -100),
+        4,
+        10,
+        25,
+        255
+        )
+    msg.pack(mav)
+    rosmsg = convert_to_rosmsg(msg)
+    mav_pub.publish(rosmsg)
+    #mav_pub.publish(rosmsg)
+    '''
+
+def vp_status_callback(status : Int8):
+    global vp_status
+    vp_status = status
 
 if __name__=="__main__":
     try:
         node = rospy.init_node("origin_publisher")
-        #topic = rospy.topics.Topic("textTopic", PoseStamped, "poseStamped")
         my_publisher = rospy.Publisher("/origin_publisher/my_topic_test", PoseStamped, queue_size=20)
         mavlink_pub = rospy.Publisher("/mavlink/to", Mavlink, queue_size=20)
         rospy.Subscriber("mavlink/from", Mavlink, mav_callback)
-        rospy.Subscriber("mavros/vision_pose/pose", PoseStamped, vision_pose_callback)
+        #rospy.Subscriber("mavros/vision_pose/pose", PoseStamped, vision_pose_callback)
+        #rospy.Subscriber("origin_publisher/vision_pose/pose", PoseStamped, vp_callback)
+        rospy.Subscriber("vision/pose", PoseStamped, vp_camera_callback)
+        rospy.Subscriber("vision/status", Int8, vp_status_callback)
         landing_pub = rospy.Publisher("mavros/landing_target/raw", LandingTarget)
+        rangefinder = rospy.Publisher("mavros/distance_sensor/rangefinder_sub", Range)
         status_text_pub = rospy.Publisher("mavros/statustext/send", StatusText, queue_size=20)
-        #landing_pub = rospy.Publisher("mavros/landing_target/pose", PoseStamped)
-        #landing_pub = rospy.Publisher("mavros/landing_target/lt_marker", Vector3Stamped)
 
         mav_pub = mavlink_pub
         # Set up mavlink instance
