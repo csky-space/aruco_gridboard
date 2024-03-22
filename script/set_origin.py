@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 import math
-
 import mavros_msgs.msg
-##
-#
-# Send SET_GPS_GLOBAL_ORIGIN and SET_HOME_POSITION messages
-#
-##
 import rospy
 from pymavlink.dialects.v10 import ardupilotmega as MAV_APM
 from mavros.mavlink import convert_to_rosmsg
@@ -52,70 +46,6 @@ def send_message(msg, mav, pub):
 
     print("sent message %s" % msg)
 
-def set_global_origin(mav, pub):
-    """
-    Send a mavlink SET_GPS_GLOBAL_ORIGIN message, which allows us
-    to use local position information without a GPS.
-    """
-    target_system = mav.srcSystem
-    #target_system = 0   # 0 --> broadcast to everyone
-    lattitude = int(lat)
-    longitude = int(lon)
-    altitude = int(alt)
-
-    msg = MAV_APM.MAVLink_set_gps_global_origin_message(
-            target_system,
-            lattitude, 
-            longitude,
-            altitude)
-
-    send_message(msg, mav, pub)
-
-def set_home_position(mav, pub):
-    """
-    Send a mavlink SET_HOME_POSITION message, which should allow
-    us to use local position information without a GPS
-    """
-    target_system = mav.srcSystem
-    #target_system = 0  # broadcast to everyone
-
-    lattitude = int(lat)
-    longitude = int(lon)
-    altitude = int(alt)
-    
-    x = 0
-    y = 0
-    z = 0
-    q = [1, 0, 0, 0]   # w x y z
-
-    approach_x = 0
-    approach_y = 0
-    approach_z = 1
-
-    msg = MAV_APM.MAVLink_set_home_position_message(
-            target_system,
-            lattitude,
-            longitude,
-            altitude,
-            x,
-            y,
-            z,
-            q,
-            approach_x,
-            approach_y,
-            approach_z)
-
-    send_message(msg, mav, pub)
-
-def mav_callback(msg):
-    a = 1
-    #print("read mavlink!!")
-    #print(msg)
-
-    #lat = lat + 1000
-    #set_global_origin(mav, mavlink_pub)
-
-
 def vp_camera_callback(pose: PoseStamped):
     #print(landing_pub.name)
     if vp_status is None:
@@ -160,7 +90,6 @@ if __name__=="__main__":
         node = rospy.init_node("origin_publisher")
         my_publisher = rospy.Publisher("/origin_publisher/my_topic_test", PoseStamped, queue_size=20)
         mavlink_pub = rospy.Publisher("/mavlink/to", Mavlink, queue_size=20)
-        rospy.Subscriber("mavlink/from", Mavlink, mav_callback)
         rospy.Subscriber("vision/pose", PoseStamped, vp_camera_callback)
         rospy.Subscriber("vision/status", Int8, vp_status_callback)
         landing_pub = rospy.Publisher("mavros/landing_target/raw", LandingTarget)
