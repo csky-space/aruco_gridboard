@@ -69,4 +69,7 @@
 
   </node>
 
+  <include file="$(find bms_manager)/launch/bms_manager_node.launch">
+  </include>
+
 </launch>
